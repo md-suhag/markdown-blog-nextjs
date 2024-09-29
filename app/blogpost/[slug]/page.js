@@ -13,6 +13,7 @@ import { transformerCopyButton } from "@rehype-pretty/transformers";
 import OnThisPage from "@/components/onthispage";
 import rehypeAutolinkHeadings from "rehype-autolink-headings";
 import rehypeSlug from "rehype-slug";
+import Image from "next/image";
 
 const contentDir = path.join(process.cwd(), "content");
 
@@ -82,6 +83,14 @@ export default async function BlogPost({ params }) {
         <p className="mb-4 text-sm italic text-gray-500">By {data.author}</p>
         <p className="mb-4 text-sm text-gray-500">{data.date}</p>
       </div>
+      <Image
+        src={data.image}
+        width={500}
+        height={500}
+        quality={70}
+        className="object-cover w-full h-64 my-4 md:w-1/2"
+        alt={data.title}
+      />
       <div
         dangerouslySetInnerHTML={{ __html: htmlContent }}
         className="prose dark:prose-invert"
