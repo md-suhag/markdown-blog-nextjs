@@ -1,4 +1,5 @@
 import fs from "fs";
+import path from "path";
 import matter from "gray-matter";
 import { notFound } from "next/navigation";
 import rehypeDocument from "rehype-document";
@@ -12,14 +13,40 @@ import { transformerCopyButton } from "@rehype-pretty/transformers";
 import OnThisPage from "@/components/onthispage";
 import rehypeAutolinkHeadings from "rehype-autolink-headings";
 import rehypeSlug from "rehype-slug";
-import Image from "next/image";
 
-export default async function Page({ params }) {
-  const filepath = `content/${params.slug}.md`;
+const contentDir = path.join(process.cwd(), "content");
+
+export async function generateStaticParams() {
+  const filenames = fs.readdirSync(contentDir);
+
+  return filenames.map((filename) => ({
+    slug: filename.replace(".md", ""),
+  }));
+}
+
+export async function generateMetadata({ params }) {
+  const { slug } = params;
+  const filepath = path.join(contentDir, `${slug}.md`);
+
+  if (!fs.existsSync(filepath)) {
+    return notFound();
+  }
+
+  const fileContent = fs.readFileSync(filepath, "utf-8");
+  const { data } = matter(fileContent);
+
+  return {
+    title: data.title,
+    description: data.description,
+  };
+}
+
+export default async function BlogPost({ params }) {
+  const { slug } = params;
+  const filepath = path.join(contentDir, `${slug}.md`);
 
   if (!fs.existsSync(filepath)) {
     notFound();
-    return;
   }
 
   const fileContent = fs.readFileSync(filepath, "utf-8");
@@ -28,13 +55,13 @@ export default async function Page({ params }) {
   const processor = unified()
     .use(remarkParse)
     .use(remarkRehype)
-    .use(rehypeDocument, { title: "👋🌍" })
+    .use(rehypeDocument, { title: data.title })
     .use(rehypeFormat)
     .use(rehypeStringify)
-    .use(rehypeAutolinkHeadings)
     .use(rehypeSlug)
+    .use(rehypeAutolinkHeadings)
     .use(rehypePrettyCode, {
-      theme: "material-theme-ocean",
+      theme: "github-dark",
       transformers: [
         transformerCopyButton({
           visibility: "always",
@@ -55,19 +82,13 @@ export default async function Page({ params }) {
         <p className="mb-4 text-sm italic text-gray-500">By {data.author}</p>
         <p className="mb-4 text-sm text-gray-500">{data.date}</p>
       </div>
-      <Image
-        src={data.image}
-        width={500}
-        height={500}
-        quality={70}
-        className="object-cover w-full h-64 my-4 md:w-1/2"
-        alt={data.title}
-      />
       <div
         dangerouslySetInnerHTML={{ __html: htmlContent }}
-        className="w-full prose dark:prose-invert"
+        className="prose dark:prose-invert"
       ></div>
       <OnThisPage htmlContent={htmlContent} />
     </div>
   );
 }
+
+export const revalidate = 60 * 60;
